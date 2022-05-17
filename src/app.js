@@ -30,12 +30,12 @@ function App() {
 	const [message, setMessage] = useState('');
 	const [stderr, setStderr] = useState([]);
 	const [files, setFiles] = useState({});
+	const [outFile, setOutFile] = useState('output.mp4');
 	const [args, setArgs] = useState([
 		'-i', 'v.mp4',
 		'-i', 'a.aac',
 		'-c:v', 'copy',
 		'-c:a', 'copy',
-		'output.mp4',
 	]);
 
 	// load the core
@@ -72,14 +72,14 @@ function App() {
 	const onFileUploaded = async (ev) => {
 		console.log('[onFileUploaded]', ev);
 
-		setMessage('Loading file, may take some times');
+		setMessage('Loading file, may take some times...');
 		const start = Date.now();
 		const {
 			target: { files },
 		} = ev;
 		const append = [];
-		for (let i in files) {
-			const file = files[0];
+		for (let i = 0; i < files.length; i++) {
+			const file = files[i];
 			const {
 				name,
 				size,
@@ -107,23 +107,67 @@ function App() {
 
 		setMessage('Start to run command');
 		const start = Date.now();
-		await ffmpeg.run(...args);
+		const out = outFile;
+		await ffmpeg.run(...[...args, out]);
 		setMessage(`Done in ${Date.now() - start} ms`);
 
-		const data = ffmpeg.FS('readFile', 'output.mp4');
+		const data = ffmpeg.FS('readFile', out);
 		setVideoSrc((v) => {
-			const blob = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
-			ffmpeg.FS('unlink', 'output.mp4');
-			return [...v, blob];
+			const blob = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' })); // TODO: by extension name
+			ffmpeg.FS('unlink', out);
+			return [...v, {
+				f: out,
+				blob,
+			}];
 		});
 	};
+	const newArgEl = useRef(null);
 	return (
 		<section class="section">
 			{/* <BackToTop topEl={topEl} /> */}
 			{/* <div ref={topEl}></div> */}
 
 			<div class="block">
-				<textarea class="textarea is-info" placeholder="$ ffmpeg ...">{args.join(' ')}</textarea>
+				<div class="block">
+					<textarea class="textarea is-info" placeholder="$ ffmpeg ..." readOnly>ffmpeg {args.join(' ')} {outFile}</textarea>
+				</div>
+				<div class="field is-grouped is-grouped-multiline">
+
+					{args.map((v, i) => {
+						const onDel = () => {
+							setArgs((v) => v.filter((_, idx) => idx !== i));
+						};
+						return (
+							<Args argv={args} idx={i} onDel={onDel}></Args>
+						);
+					})}
+
+					<div class="field has-addons mx-4">
+						<div class="control">
+							<input ref={newArgEl} class="input" type="text" placeholder="args"></input>
+						</div>
+						<div class="control">
+							<a class="button is-info" onClick={() => {
+								if (!newArgEl.current) return;
+								const val = newArgEl.current.value;
+								if (val === '') return;
+								newArgEl.current.value = '';
+								setArgs((v) => {
+									return [...v, val];
+								});
+							}}><span class="">Add</span></a>
+						</div>
+					</div>
+
+					<div class="field has-addons mx-4">
+						<div class="control">
+							<a class="button is-static">output</a>
+						</div>
+						<div class="control">
+							<input class="input is-primary" type="text" placeholder="output.mp4" value={outFile} onBlur={(e) => { setOutFile(e.target.value); }}></input>
+						</div>
+					</div>
+				</div>
 			</div>
 
 			<div class="block">
@@ -134,13 +178,13 @@ function App() {
 							<p class="control">
 								<div class="file">
 									<label class="file-label">
-										<input class="file-input" type="file" onChange={onFileUploaded}></input>
+										<input class="file-input" type="file" onChange={onFileUploaded} multiple></input>
 										<span class="file-cta">
 											<span class="file-icon">
 												<i class="fas fa-upload"></i>
 											</span>
 											<span class="file-label">
-												Choose a file…
+												Choose files...
 											</span>
 										</span>
 									</label>
@@ -162,7 +206,6 @@ function App() {
 
 					{Object.keys(files).length > 0 &&
 						<div class="panel-block">
-							{/* <button class="button is-danger is-outlined is-fullwidth">delete</button> */}
 							<button class="button is-success is-outlined is-fullwidth mr-3" onClick={runFn}>run</button>
 							<button class="button is-danger is-outlined ml-3">delete</button>
 						</div>
@@ -190,18 +233,18 @@ function App() {
 				<div class="columns is-flex-wrap-wrap">
 					{videoSrc.map((v, i) => {
 						const closeFn = (ev) => {
-							URL.revokeObjectURL(v);
-							setVideoSrc((urls) => urls.filter((url) => url !== v));
+							URL.revokeObjectURL(v.blob);
+							setVideoSrc((urls) => urls.filter((info) => info.blob !== v.blob));
 						}
 						return (
 							<div key={v} class="column is-half-tablet is-one-third-desktop is-one-quarter-widescreen">
 								<div class="card">
 									<header class="card-header">
-										<p class="card-header-title">{'output.mp4'}</p>
+										<p class="card-header-title">{v.f}</p>
 										<div class="card-header-icon"><button class="delete" onClick={closeFn}></button></div>
 									</header>
 									<div class="card-content">
-										<video src={v} controls></video>
+										<video src={v.blob} controls></video>
 									</div>
 								</div>
 							</div>
@@ -215,6 +258,27 @@ function App() {
 }
 
 render(h(App), document.getElementById('app'));
+
+function Args(props) {
+	const {
+		argv,
+		idx,
+		onDel = () => { },
+	} = props;
+	const updateFn = (e) => {
+		argv[idx] = e.target.value;
+	};
+	return (
+		<div class="field has-addons mx-4">
+			<div class="control">
+				<a class="button is-light" onClick={onDel}><span class="delete"></span></a>
+			</div>
+			<div class="control">
+				<input class="input" type="text" placeholder="args" value={argv[idx]} onInput={updateFn}></input>
+			</div>
+		</div>
+	);
+}
 
 function FileInfo(props) {
 	const {
