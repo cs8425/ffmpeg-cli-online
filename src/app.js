@@ -56,9 +56,9 @@ function App() {
 			});
 			ffmpeg.setLogger(({ type, message }) => {
 				switch (type) {
-				case 'fferr':
-					setStderr((v) => [...v, message]);
-					return;
+					case 'fferr':
+						setStderr((v) => [...v, message]);
+						return;
 				}
 			});
 
@@ -113,14 +113,63 @@ function App() {
 		const data = ffmpeg.FS('readFile', 'output.mp4');
 		setVideoSrc((v) => {
 			const blob = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+			ffmpeg.FS('unlink', 'output.mp4');
 			return [...v, blob];
 		});
 	};
 	return (
 		<section class="section">
-			<textarea class="textarea is-link" placeholder="stderr">{stderr.join('\n')}</textarea>
+			{/* <BackToTop topEl={topEl} /> */}
+			{/* <div ref={topEl}></div> */}
 
-			<textarea class="textarea is-info" placeholder="$ ffmpeg ...">{args.join(' ')}</textarea>
+			<div class="block">
+				<textarea class="textarea is-info" placeholder="$ ffmpeg ...">{args.join(' ')}</textarea>
+			</div>
+
+			<div class="block">
+				<nav class="panel">
+					<p class="panel-heading">Files</p>
+					<div class="panel-tabs py-4">
+						<div class="field is-grouped is-grouped-centered is-expanded">
+							<p class="control">
+								<div class="file">
+									<label class="file-label">
+										<input class="file-input" type="file" onChange={onFileUploaded}></input>
+										<span class="file-cta">
+											<span class="file-icon">
+												<i class="fas fa-upload"></i>
+											</span>
+											<span class="file-label">
+												Choose a file…
+											</span>
+										</span>
+									</label>
+								</div>
+							</p>
+							<p class="control">
+								<div class="buttons">
+									{/* <button class="button is-success" onClick={runFn}>Run</button> */}
+									{/* <button class="button is-danger is-fullwidth">delete</button> */}
+								</div>
+							</p>
+						</div>
+					</div>
+
+					{Object.keys(files).map((k) => {
+						const v = files[k];
+						return (<FileInfo {...v}></FileInfo>);
+					})}
+
+					{Object.keys(files).length > 0 &&
+						<div class="panel-block">
+							{/* <button class="button is-danger is-outlined is-fullwidth">delete</button> */}
+							<button class="button is-success is-outlined is-fullwidth mr-3" onClick={runFn}>run</button>
+							<button class="button is-danger is-outlined ml-3">delete</button>
+						</div>
+					}
+				</nav>
+			</div>
+
 			{message &&
 				<div class="notification">
 					<button class="delete"></button>
@@ -128,58 +177,81 @@ function App() {
 				</div>
 			}
 
+			<div class="block">
+				<textarea class="textarea is-link" placeholder="stderr">{stderr.join('\n')}</textarea>
+			</div>
+
+
 			{progress != 0 &&
 				<progress class="progress is-small" value={progress} max="100">{progress}%</progress>
 			}
 
-			<section class="section">
-				{/* <BackToTop topEl={topEl} /> */}
-				{/* <div ref={topEl}></div> */}
-
-
-				<div class="buttons">
-					<button class="button is-success" onClick={runFn}>Run</button>
-				</div>
-				<div class="file">
-					<label class="file-label">
-						<input class="file-input" type="file" onChange={onFileUploaded}></input>
-						<span class="file-cta">
-							<span class="file-icon">
-								<i class="fas fa-upload"></i>
-							</span>
-							<span class="file-label">
-								Choose a file…
-							</span>
-						</span>
-					</label>
-				</div>
-
-				<div class="section">
-					{Object.keys(files).map((k) => {
-						const v = files[k];
-						return (
-							<div class="tags has-addons are-large">
-								<a class="tag is-delete"></a>
-								<span class="tag">{v.name}</span>
-								<span class="tag is-dark">{v.size}</span>
-							</div>
-						);
-					})}
-				</div>
-
-				<div class="section">
+			<div class="block">
+				<div class="columns is-flex-wrap-wrap">
 					{videoSrc.map((v, i) => {
+						const closeFn = (ev) => {
+							URL.revokeObjectURL(v);
+							setVideoSrc((urls) => urls.filter((url) => url !== v));
+						}
 						return (
-							<div class="box">
-								<video src={v} controls></video>
+							<div key={v} class="column is-half-tablet is-one-third-desktop is-one-quarter-widescreen">
+								<div class="card">
+									<header class="card-header">
+										<p class="card-header-title">{'output.mp4'}</p>
+										<div class="card-header-icon"><button class="delete" onClick={closeFn}></button></div>
+									</header>
+									<div class="card-content">
+										<video src={v} controls></video>
+									</div>
+								</div>
 							</div>
 						);
 					})}
 				</div>
-			</section>
+			</div>
 
 		</section>
 	);
 }
 
 render(h(App), document.getElementById('app'));
+
+function FileInfo(props) {
+	const {
+		name,
+		size,
+		type,
+		fd,
+	} = props;
+	return (
+		<label class="panel-block is-justify-content-space-between">
+			<div class="level-left">
+				<div class="level-item">
+					<input type="checkbox"></input>
+				</div>
+				<div class="level-item">{name}</div>
+			</div>
+			<div class="level-right">
+				<p class="level-item">{printSize(size)}</p>
+				{/* <p class="level-item"><button class="delete is-medium"></button></p> */}
+			</div>
+		</label>
+	);
+}
+
+function printSize(v) {
+	let unit = 'Bytes';
+	if (v > 1024) {
+		v /= 1024;
+		unit = 'KB';
+	}
+	if (v > 1024) {
+		v /= 1024;
+		unit = 'MB';
+	}
+	if (v > 1024) {
+		v /= 1024;
+		unit = 'GB';
+	}
+	return `${v.toFixed(2)} ${unit}`;
+}
