@@ -124,6 +124,21 @@ function App() {
 	const newArgEl = useRef(null);
 	return (
 		<section class="section">
+			<h1 class="title">FFmpeg cli online</h1>
+			<p class="subtitle">client-side-only FFmpeg power by ffmpeg.wasm</p>
+			<a
+				class="button is-large is-rounded is-dark"
+				style="position: absolute;right: 1rem;top: 1rem;"
+				title="GitHub repo"
+				href="https://github.com/cs8425/ffmpeg-cli-online"
+				target="_blank"
+			>
+				<span class="icon is-medium">
+					<i class="fab fa-github"></i>
+				</span>
+			</a>
+			<hr />
+
 			{/* <BackToTop topEl={topEl} /> */}
 			{/* <div ref={topEl}></div> */}
 
@@ -221,7 +236,7 @@ function App() {
 			}
 
 			<div class="block">
-				<textarea class="textarea is-link" placeholder="stderr">{stderr.join('\n')}</textarea>
+				<textarea class="textarea is-link" placeholder="stderr" readonly>{stderr.join('\n')}</textarea>
 			</div>
 
 
