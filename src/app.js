@@ -125,7 +125,7 @@ function App() {
 	return (
 		<section class="section">
 			<h1 class="title">FFmpeg cli online</h1>
-			<p class="subtitle">client-side-only FFmpeg power by ffmpeg.wasm</p>
+			<p class="subtitle">client-side-only FFmpeg power by <a href="https://ffmpegwasm.netlify.app/" target="_blank" rel="noopener">ffmpeg.wasm</a></p>
 			<a
 				class="button is-large is-rounded is-dark"
 				style="position: absolute;right: 1rem;top: 1rem;"
