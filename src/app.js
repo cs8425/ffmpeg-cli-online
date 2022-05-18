@@ -25,10 +25,11 @@ function App() {
 	const isMobile = useMobile();
 	console.log('[ffmpeg]', ffmpeg);
 
-	const [videoSrc, setVideoSrc] = useState([]);
+	const [loading, setLoading] = useState(true);
 	const [progress, setProgress] = useState(0);
 	const [message, setMessage] = useState('');
 	const [stderr, setStderr] = useState([]);
+
 	const [files, setFiles] = useState({});
 	const [outFile, setOutFile] = useState('output.mp4');
 	const [args, setArgs] = useState([
@@ -37,6 +38,7 @@ function App() {
 		'-c:v', 'copy',
 		'-c:a', 'copy',
 	]);
+	const [videoSrc, setVideoSrc] = useState([]); // output files
 
 	// load the core
 	useEffect(() => {
@@ -66,6 +68,7 @@ function App() {
 			const start = Date.now();
 			await ffmpeg.load();
 			setMessage(`Loaded FFmpeg.wasm in ${Date.now() - start} ms`);
+			setLoading(false);
 		})();
 	}, []);
 
@@ -143,76 +146,86 @@ function App() {
 			{/* <div ref={topEl}></div> */}
 
 			<div class="block">
-				<div class="block">
-					<textarea class="textarea is-info" placeholder="$ ffmpeg ..." readOnly>ffmpeg {args.join(' ')} {outFile}</textarea>
-				</div>
-				<div class="field is-grouped is-grouped-multiline">
+				<MsgBlock header="ffmpeg command">
+					<textarea class="textarea is-info" placeholder="$ ffmpeg ..." readOnly rows={2}>ffmpeg {args.join(' ')} {outFile}</textarea>
+				</MsgBlock>
 
-					{args.map((v, i) => {
-						const onDel = () => {
-							setArgs((v) => v.filter((_, idx) => idx !== i));
-						};
-						return (
-							<Args argv={args} idx={i} onDel={onDel}></Args>
-						);
-					})}
+				<MsgBlock header="args:">
+					<div class="field is-grouped is-grouped-multiline">
 
-					<div class="field has-addons mx-4">
-						<div class="control">
-							<input ref={newArgEl} class="input" type="text" placeholder="args"></input>
+						{args.map((v, i) => {
+							const onDel = () => {
+								setArgs((v) => v.filter((_, idx) => idx !== i));
+							};
+							return (
+								<Args argv={args} idx={i} onDel={onDel}></Args>
+							);
+						})}
+
+						<div class="field has-addons mx-4">
+							<div class="control">
+								<input ref={newArgEl} class="input is-info" type="text" placeholder="args"></input>
+							</div>
+							<div class="control">
+								<a class="button is-info" onClick={() => {
+									if (!newArgEl.current) return;
+									const val = newArgEl.current.value;
+									if (val === '') return;
+									newArgEl.current.value = '';
+									setArgs((v) => {
+										return [...v, val];
+									});
+								}}><span class="">Add</span></a>
+							</div>
 						</div>
-						<div class="control">
-							<a class="button is-info" onClick={() => {
-								if (!newArgEl.current) return;
-								const val = newArgEl.current.value;
-								if (val === '') return;
-								newArgEl.current.value = '';
-								setArgs((v) => {
-									return [...v, val];
-								});
-							}}><span class="">Add</span></a>
+
+						<div class="field has-addons mx-4" title="output filename">
+							<div class="control">
+								<a class="button is-primary is-outlined is-static">output</a>
+							</div>
+							<div class="control">
+								<input class="input is-primary" type="text" placeholder="output.mp4" value={outFile} onBlur={(e) => { setOutFile(e.target.value); }}></input>
+							</div>
 						</div>
 					</div>
-
-					<div class="field has-addons mx-4">
-						<div class="control">
-							<a class="button is-static">output</a>
-						</div>
-						<div class="control">
-							<input class="input is-primary" type="text" placeholder="output.mp4" value={outFile} onBlur={(e) => { setOutFile(e.target.value); }}></input>
-						</div>
-					</div>
-				</div>
+				</MsgBlock>
 			</div>
+
 
 			<div class="block">
 				<nav class="panel">
 					<p class="panel-heading">Files</p>
-					<div class="panel-tabs py-4">
-						<div class="field is-grouped is-grouped-centered is-expanded">
-							<p class="control">
-								<div class="file">
-									<label class="file-label">
-										<input class="file-input" type="file" onChange={onFileUploaded} multiple></input>
-										<span class="file-cta">
-											<span class="file-icon">
-												<i class="fas fa-upload"></i>
+					{!loading &&
+						<div class="panel-tabs py-4">
+							<div class="field is-grouped is-grouped-centered is-expanded">
+								<p class="control">
+									<div class="file">
+										<label class="file-label">
+											<input class="file-input" type="file" onChange={onFileUploaded} multiple></input>
+											<span class="file-cta">
+												<span class="file-icon">
+													<i class="fas fa-upload"></i>
+												</span>
+												<span class="file-label">
+													Choose files...
+												</span>
 											</span>
-											<span class="file-label">
-												Choose files...
-											</span>
-										</span>
-									</label>
-								</div>
-							</p>
-							<p class="control">
-								<div class="buttons">
-									{/* <button class="button is-success" onClick={runFn}>Run</button> */}
-									{/* <button class="button is-danger is-fullwidth">delete</button> */}
-								</div>
-							</p>
+										</label>
+									</div>
+								</p>
+								<p class="control">
+									<div class="buttons">
+										{/* <button class="button is-success" onClick={runFn}>Run</button> */}
+										{/* <button class="button is-danger is-fullwidth">delete</button> */}
+									</div>
+								</p>
+							</div>
 						</div>
-					</div>
+					}
+					{loading &&
+						<div class="panel-block notification">Loading ffmpeg...</div>
+					}
+
 
 					{Object.keys(files).map((k) => {
 						const v = files[k];
@@ -228,6 +241,7 @@ function App() {
 				</nav>
 			</div>
 
+
 			{message &&
 				<div class="notification">
 					<button class="delete"></button>
@@ -235,9 +249,10 @@ function App() {
 				</div>
 			}
 
-			<div class="block">
+
+			<MsgBlock header="stderr">
 				<textarea class="textarea is-link" placeholder="stderr" readonly>{stderr.join('\n')}</textarea>
-			</div>
+			</MsgBlock>
 
 
 			{progress != 0 &&
@@ -286,7 +301,7 @@ function Args(props) {
 	return (
 		<div class="field has-addons mx-4">
 			<div class="control">
-				<a class="button is-light" onClick={onDel}><span class="delete"></span></a>
+				<a class="button is-danger" onClick={onDel}><span class="delete"></span></a>
 			</div>
 			<div class="control">
 				<input class="input" type="text" placeholder="args" value={argv[idx]} onInput={updateFn}></input>
@@ -333,4 +348,26 @@ function printSize(v) {
 		unit = 'GB';
 	}
 	return `${v.toFixed(2)} ${unit}`;
+}
+
+function MsgBlock(props) {
+	const {
+		header,
+		children,
+		isExpand = true,
+	} = props;
+	const [expand, setExpand] = useState(isExpand);
+	return (
+		<section class="message">
+			<div class="message-header">
+				<p>{header}</p>
+				<span class="icon is-clickable" onClick={(e) => setExpand((v) => !v)}>
+					<i class={`fas fa-angle-${(expand) ? 'up' : 'down'}`} aria-hidden="true"></i>
+				</span>
+			</div>
+			{expand &&
+				<div class="message-body">{children}</div>
+			}
+		</section>
+	);
 }
