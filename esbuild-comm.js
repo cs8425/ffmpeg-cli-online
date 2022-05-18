@@ -73,7 +73,8 @@ let copyPlugin = {
 			copy('./public', options.outdir);
 			console.log('copy static files end: ', './public', '->', options.outdir);
 
-			copy('./node_modules/@ffmpeg/core/dist', options.outdir);
+			// copy('./node_modules/@ffmpeg/core/dist', options.outdir);
+			copy('./ffmpeg.wasm-core', options.outdir); // temporary fix for unicode filename @ https://github.com/cs8425/ffmpeg.wasm-core/tree/export-string-functions
 			console.log('copy static files end: ', '@ffmpeg/core', '->', options.outdir);
 		})
 	},

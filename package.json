@@ -4,7 +4,7 @@
     "description": "A client side tool for running ffmpeg.",
     "dependencies": {
         "@ffmpeg/core": "^0.10.0",
-        "@ffmpeg/ffmpeg": "^0.10.1",
+        "@ffmpeg/ffmpeg": "github:cs8425/ffmpeg.wasm#unicode-filename",
         "bulma": "^0.9.4",
         "preact": "^10.7.2"
     },
