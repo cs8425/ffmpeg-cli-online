@@ -293,17 +293,7 @@ function App() {
 							setVideoSrc((urls) => urls.filter((info) => info.blob !== v.blob));
 						}
 						return (
-							<div key={v} class="column is-half-tablet is-one-third-desktop is-one-quarter-widescreen">
-								<div class="card">
-									<header class="card-header">
-										<p class="card-header-title">{v.f}</p>
-										<div class="card-header-icon"><button class="delete" onClick={closeFn}></button></div>
-									</header>
-									<div class="card-content">
-										<video src={v.blob} controls></video>
-									</div>
-								</div>
-							</div>
+							<MediaBlock key={v} name={v.f} url={v.blob} closeFn={closeFn}></MediaBlock>
 						);
 					})}
 				</div>
@@ -398,5 +388,33 @@ function MsgBlock(props) {
 				<div class="message-body">{children}</div>
 			}
 		</section>
+	);
+}
+
+function MediaBlock(props) {
+	const {
+		children,
+		name,
+		url,
+		closeFn = () => { },
+	} = props;
+	return (
+		<div class="column is-half-tablet is-one-third-desktop is-one-quarter-widescreen">
+			<div class="card">
+				<header class="card-header">
+					<p class="card-header-title">{name}</p>
+					<div class="card-header-icon"><button class="delete" onClick={closeFn}></button></div>
+				</header>
+				<div class="card-image">
+					<video style="width: 100%;" src={url} controls></video>
+				</div>
+				<footer class="card-footer">
+					{/* <a href={url} download={name} class="card-footer-item">Download</a> */}
+					<p class="card-footer-item">
+						<a href={url} download={name} class="button is-link is-outlined is-fullwidth">Download</a>
+					</p>
+				</footer>
+			</div>
+		</div>
 	);
 }
