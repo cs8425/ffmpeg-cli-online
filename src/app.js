@@ -5,10 +5,10 @@ import 'bulma/css/bulma.css';
 import './all.min.css';
 
 // comp
-import {
-	BackToTop,
-	useMobile,
-} from './simple.jsx';
+// import {
+// 	BackToTop,
+// 	useMobile,
+// } from './simple.jsx';
 
 
 import {
@@ -22,7 +22,7 @@ const ffmpeg = createFFmpeg({
 });
 
 function App() {
-	const isMobile = useMobile();
+	// const isMobile = useMobile();
 	console.log('[ffmpeg]', ffmpeg);
 
 	const [loading, setLoading] = useState(true);
@@ -124,6 +124,15 @@ function App() {
 			}];
 		});
 	};
+	const delFn = (ev) => {
+		// console.log('[rm]', Object.keys(files).filter((v) => files[v].rm), files);
+		const rm = Object.keys(files).filter((v) => files[v].rm);
+		rm.forEach((k) => {
+			ffmpeg.FS('unlink', files[k].name);
+			delete files[k];
+		});
+		setFiles((v) => ({ ...v }));
+	};
 	const newArgEl = useRef(null);
 	return (
 		<section class="section">
@@ -157,8 +166,11 @@ function App() {
 							const onDel = () => {
 								setArgs((v) => v.filter((_, idx) => idx !== i));
 							};
+							const onUpdate = () => {
+								setArgs((v) => [...v]);
+							};
 							return (
-								<Args argv={args} idx={i} onDel={onDel}></Args>
+								<Args argv={args} idx={i} onDel={onDel} onUpdate={onUpdate}></Args>
 							);
 						})}
 
@@ -184,7 +196,12 @@ function App() {
 								<a class="button is-primary is-outlined is-static">output</a>
 							</div>
 							<div class="control">
-								<input class="input is-primary" type="text" placeholder="output.mp4" value={outFile} onBlur={(e) => { setOutFile(e.target.value); }}></input>
+								<input
+									class="input is-primary"
+									type="text"
+									placeholder="output.mp4"
+									value={outFile} onBlur={(e) => { setOutFile(e.target.value); }}
+								></input>
 							</div>
 						</div>
 					</div>
@@ -229,13 +246,22 @@ function App() {
 
 					{Object.keys(files).map((k) => {
 						const v = files[k];
-						return (<FileInfo {...v}></FileInfo>);
+						const updateFn = (e) => {
+							// console.log('[ck]', k, e.target.checked, e);
+							files[k].rm = e.target.checked;
+							setFiles((v) => ({ ...v }));
+						};
+						return (<FileInfo {...v} updateFn={updateFn}></FileInfo>);
 					})}
 
 					{Object.keys(files).length > 0 &&
 						<div class="panel-block">
 							<button class="button is-success is-outlined is-fullwidth mr-3" onClick={runFn}>run</button>
-							<button class="button is-danger is-outlined ml-3">delete</button>
+							<button
+								class="button is-danger is-outlined ml-3"
+								onClick={delFn}
+								disabled={Object.keys(files).filter((v) => files[v].rm).length === 0}
+							>delete</button>
 						</div>
 					}
 				</nav>
@@ -294,6 +320,7 @@ function Args(props) {
 		argv,
 		idx,
 		onDel = () => { },
+		onUpdate = () => { },
 	} = props;
 	const updateFn = (e) => {
 		argv[idx] = e.target.value;
@@ -304,7 +331,7 @@ function Args(props) {
 				<a class="button is-danger" onClick={onDel}><span class="delete"></span></a>
 			</div>
 			<div class="control">
-				<input class="input" type="text" placeholder="args" value={argv[idx]} onInput={updateFn}></input>
+				<input class="input" type="text" placeholder="args" value={argv[idx]} onInput={updateFn} onBlur={onUpdate}></input>
 			</div>
 		</div>
 	);
@@ -316,12 +343,14 @@ function FileInfo(props) {
 		size,
 		type,
 		fd,
+		rm = false,
+		updateFn,
 	} = props;
 	return (
 		<label class="panel-block is-justify-content-space-between">
 			<div class="level-left">
 				<div class="level-item">
-					<input type="checkbox"></input>
+					<input type="checkbox" onChange={updateFn} checked={rm}></input>
 				</div>
 				<div class="level-item">{name}</div>
 			</div>
